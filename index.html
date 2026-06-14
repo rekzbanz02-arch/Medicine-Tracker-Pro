@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Medicine Tracker Pro</title>
+<meta name="theme-color" content="#2f5d3a">
+
+<style>
+:root{
+  --leaf-dark:#2f5d3a;
+  --leaf:#4b8b5d;
+  --leaf-light:#a8d5ba;
+  --cream:#f4f7f0;
+  --soil:#6b4f3b;
+  --sun:#f2c14e;
+  --berry:#d9534f;
+  --text:#27322a;
+  --card-radius:16px;
+  --shadow: 0 4px 14px rgba(47,93,58,0.12);
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+  margin:0;
+  background: linear-gradient(180deg, #eaf4ec 0%, #f4f7f0 40%, #eef6f0 100%);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:30px;
+}
+
+header{
+  background: linear-gradient(135deg, var(--leaf-dark), var(--leaf));
+  color:white;
+  padding:22px 16px 28px;
+  text-align:center;
+  border-radius: 0 0 28px 28px;
+  box-shadow: var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+header::after{
+  content:"🌿";
+  position:absolute;
+  font-size:90px;
+  opacity:0.12;
+  right:-15px;
+  top:-20px;
+  transform:rotate(15deg);
+}
+header h2{ margin:0; font-size:1.4rem; letter-spacing:0.5px; }
+header p{ margin:6px 0 0; font-size:0.85rem; opacity:0.9; }
+
+.container{ padding:14px; max-width:560px; margin:0 auto; }
+
+.card{
+  background:white;
+  padding:16px;
+  margin-bottom:14px;
+  border-radius:var(--card-radius);
+  box-shadow: var(--shadow);
+  border-left:5px solid var(--leaf);
+  transition: transform .15s ease;
+}
+.card:active{ transform: scale(0.99); }
+
+.card h3{
+  margin:0 0 8px;
+  font-size:1.05rem;
+  display:flex; align-items:center; gap:8px;
+}
+
+.med-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.taken-toggle{
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  font-size:0.95rem;
+  user-select:none;
+}
+.taken-toggle input{
+  width:22px; height:22px;
+  accent-color: var(--leaf-dark);
+  cursor:pointer;
+}
+
+.streak-badge{
+  background:var(--leaf-light);
+  color:var(--leaf-dark);
+  padding:5px 10px;
+  border-radius:20px;
+  font-size:0.8rem;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+.dose-time{
+  margin-top:8px;
+  font-size:0.8rem;
+  color:#6b8270;
+  display:flex; align-items:center; gap:6px;
+}
+.dose-time input[type=time]{
+  border:1px solid var(--leaf-light);
+  border-radius:6px;
+  padding:3px 6px;
+  font-size:0.8rem;
+  background:var(--cream);
+  color:var(--text);
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  background: linear-gradient(135deg, var(--leaf), var(--leaf-dark));
+  color:white;
+  border-radius:12px;
+  font-size:0.95rem;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow: var(--shadow);
+  transition: opacity .15s ease;
+}
+button:active{ opacity:0.85; }
+
+button.secondary{
+  background:white;
+  color:var(--leaf-dark);
+  border:2px solid var(--leaf-light);
+  box-shadow:none;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap:6px;
+  margin-top:10px;
+}
+
+.day{
+  background:var(--cream);
+  padding:8px 2px;
+  text-align:center;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:600;
+  color:#8a9b8e;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.day .dow{ font-size:9px; font-weight:500; text-transform:uppercase; opacity:0.7; }
+.day .icon{ font-size:14px; }
+
+.day.taken{ background:var(--leaf-light); color:var(--leaf-dark); }
+.day.taken .icon::after{ content:"✓"; }
+.day.missed{ background:#fbe1df; color:var(--berry); }
+.day.missed .icon::after{ content:"✕"; }
+.day.partial{ background:#fff3cf; color:#a07a1d; }
+.day.partial .icon::after{ content:"½"; }
+.day.future{ background:#f0f3ee; color:#c4cdc8; }
+.day.today{ outline:2px solid var(--leaf); }
+
+.small{ font-size:12px; color:#8a9b8e; }
+
+.legend{
+  display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; font-size:11px; color:#6b8270;
+}
+.legend span{ display:flex; align-items:center; gap:4px; }
+.legend .dot{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+.dot.taken{ background:var(--leaf-light); }
+.dot.missed{ background:#fbe1df; }
+.dot.partial{ background:#fff3cf; }
+.dot.future{ background:#f0f3ee; }
+
+.toast{
+  position:fixed;
+  bottom:20px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--leaf-dark);
+  color:white;
+  padding:10px 18px;
+  border-radius:30px;
+  font-size:0.85rem;
+  box-shadow: var(--shadow);
+  opacity:0;
+  transition: all .3s ease;
+  pointer-events:none;
+  z-index:999;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.add-btn{
+  background:white;
+  color:var(--leaf-dark);
+  border:2px dashed var(--leaf-light);
+  box-shadow:none;
+  margin-bottom:14px;
+}
+
+.med-actions{
+  display:flex; gap:6px; margin-top:10px;
+}
+.med-actions button{
+  flex:1;
+  padding:8px;
+  font-size:0.8rem;
+}
+.med-actions .danger{
+  background:white;
+  color:var(--berry);
+  border:2px solid #f5cdcb;
+  box-shadow:none;
+}
+
+dialog{
+  border:none;
+  border-radius:16px;
+  padding:18px;
+  box-shadow: var(--shadow);
+  max-width:340px;
+  width:88%;
+}
+dialog:not([open]){ display:none; }
+dialog[open]{
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+}
+dialog::backdrop{ background:rgba(47,93,58,0.35); }
+dialog h3{ margin-top:0; }
+dialog input{
+  width:100%;
+  padding:10px;
+  margin:6px 0 14px;
+  border:1px solid var(--leaf-light);
+  border-radius:8px;
+  font-size:0.95rem;
+  background:var(--cream);
+}
+dialog .dialog-actions{ display:flex; gap:8px; }
+.dialog-actions button{ flex:1; }
+
+/* ---------------- GUIDE ACCORDION ---------------- */
+.guide-intro{
+  font-size:0.85rem;
+  color:#6b8270;
+  margin:0 0 12px;
+  line-height:1.5;
+}
+
+details.guide-item{
+  background:var(--cream);
+  border:1px solid var(--leaf-light);
+  border-radius:12px;
+  margin-bottom:10px;
+  overflow:hidden;
+}
+details.guide-item summary{
+  cursor:pointer;
+  padding:12px 14px;
+  font-weight:700;
+  font-size:0.95rem;
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:white;
+  color:var(--leaf-dark);
+}
+details.guide-item summary::-webkit-details-marker{ display:none; }
+details.guide-item summary::after{
+  content:"▾";
+  font-size:0.8rem;
+  color:var(--leaf);
+  transition: transform .2s ease;
+  flex-shrink:0;
+}
+details.guide-item[open] summary::after{
+  transform: rotate(180deg);
+}
+details.guide-item summary .summary-icon{ margin-right:8px; }
+
+.guide-body{
+  padding:12px 14px 14px;
+}
+.guide-section{
+  margin-bottom:10px;
+}
+.guide-section:last-child{ margin-bottom:0; }
+.guide-section h4{
+  margin:0 0 6px;
+  font-size:0.85rem;
+  color:var(--soil);
+  display:flex; align-items:center; gap:6px;
+}
+.guide-body ul{
+  margin:0 0 0 0;
+  padding-left:20px;
+  font-size:0.85rem;
+  line-height:1.55;
+  color:var(--text);
+}
+.guide-body ul li{ margin-bottom:4px; }
+.guide-body ul ul{
+  margin-top:4px;
+}
+.guide-note{
+  background:#fff3cf;
+  border-left:4px solid var(--sun);
+  border-radius:8px;
+  padding:8px 10px;
+  font-size:0.8rem;
+  color:#7a5d12;
+  margin-top:8px;
+}
+.guide-warning{
+  background:#fbe1df;
+  border-left:4px solid var(--berry);
+  border-radius:8px;
+  padding:8px 10px;
+  font-size:0.8rem;
+  color:#9c3a37;
+  margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>🌿 Medicine Tracker Pro</h2>
+  <p>Streaks • Weekly Garden View • Background Alerts</p>
+</header>
+
+<div class="container">
+
+  <div id="med-list"></div>
+
+  <button class="add-btn" onclick="openAddDialog()">＋ Add Medicine</button>
+
+  <div class="card">
+    <h3>🗓️ Weekly History</h3>
+    <div class="small" id="overall-summary"></div>
+    <div class="grid" id="calendar"></div>
+    <div class="legend">
+      <span><i class="dot taken"></i> All taken</span>
+      <span><i class="dot partial"></i> Partial</span>
+      <span><i class="dot missed"></i> Missed</span>
+      <span><i class="dot future"></i> Upcoming</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📖 Medicine Guide</h3>
+    <p class="guide-intro">Quick reference for how and when to take your medicines, and what to watch for. This is general information only — always follow your doctor's specific instructions.</p>
+
+    <details class="guide-item">
+      <summary><span><span class="summary-icon">💊</span>Clopidogrel — How &amp; When to Take</span></summary>
+      <div class="guide-body">
+        <div class="guide-section">
+          <h4>🕐 Best General Schedule</h4>
+          <ul>
+            <li>Once daily, at the <strong>same time every day</strong></li>
+            <li>Most commonly taken in the <strong>morning</strong> (with or after breakfast)</li>
+            <li>Helps you remember it easily</li>
+            <li>Reduces the chance of missing a dose</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>🍽️ With or Without Food?</h4>
+          <ul>
+            <li>Can be taken with or without food</li>
+            <li>Taking it with food is often preferred if you get mild stomach discomfort</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>🔁 Consistency Rule</h4>
+          <ul>
+            <li>What matters most is taking it <strong>every 24 hours consistently</strong></li>
+            <li>Avoid skipping or changing the timing frequently</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>⏳ If You Miss a Dose</h4>
+          <ul>
+            <li>Take it as soon as you remember</li>
+            <li>If it's already close to the next dose → skip the missed one</li>
+            <li>Do <strong>not</strong> double dose</li>
+          </ul>
+        </div>
+
+        <div class="guide-warning">
+          ⚠️ Do not stop suddenly without doctor advice — it reduces clot protection. Watch for bleeding signs (cuts, gum bleeding, bruising). Tell your doctor if you're also taking aspirin or other blood thinners.
+        </div>
+      </div>
+    </details>
+
+    <details class="guide-item">
+      <summary><span><span class="summary-icon">💊</span>Clopidogrel + Losartan — Together</span></summary>
+      <div class="guide-body">
+        <div class="guide-section">
+          <h4>✅ Is It Safe Together?</h4>
+          <ul>
+            <li>No major direct drug interaction between clopidogrel and losartan</li>
+            <li>Often prescribed together for:
+              <ul>
+                <li>High blood pressure (losartan)</li>
+                <li>Heart disease / stroke prevention (clopidogrel)</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>👀 What to Watch For</h4>
+          <ul>
+            <li><strong>Bleeding risk</strong> (from clopidogrel):
+              <ul>
+                <li>Easy bruising</li>
+                <li>Nosebleeds</li>
+                <li>Bleeding gums</li>
+                <li>Black or tarry stools — <strong>urgent check</strong></li>
+              </ul>
+            </li>
+            <li><strong>Blood pressure effects</strong> (from losartan):
+              <ul>
+                <li>Dizziness, especially when standing up quickly</li>
+                <li>Lightheadedness if blood pressure drops too low</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>🕐 How to Take Them Safely</h4>
+          <ul>
+            <li>Can be taken at the same time or at different times of the day</li>
+            <li>Most common routine:
+              <ul>
+                <li>Losartan: once daily (morning or evening, per doctor advice)</li>
+                <li>Clopidogrel: once daily at a consistent time (often morning)</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="guide-warning">
+          ⚠️ Avoid starting new painkillers like ibuprofen or naproxen without advice — they can increase bleeding risk with clopidogrel. Inform your doctor of any unusual bleeding or persistent dizziness.
+        </div>
+      </div>
+    </details>
+
+    <details class="guide-item">
+      <summary><span><span class="summary-icon">💊</span>Clopidogrel + Losartan + Amlodipine — Combo Guide</span></summary>
+      <div class="guide-body">
+        <div class="guide-section">
+          <h4>✅ Safety</h4>
+          <ul>
+            <li>No dangerous direct interaction between these three in standard use</li>
+            <li>Commonly combined for high blood pressure, heart disease, or stroke prevention plans</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>🧩 What Each One Does</h4>
+          <ul>
+            <li><strong>Amlodipine</strong> → relaxes blood vessels (lowers BP)</li>
+            <li><strong>Losartan</strong> → blocks the hormone that raises BP</li>
+            <li><strong>Clopidogrel</strong> → prevents blood clots</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>👀 Things to Watch For</h4>
+          <ul>
+            <li><strong>Low blood pressure</strong>:
+              <ul>
+                <li>Dizziness</li>
+                <li>Weakness</li>
+                <li>Blurred vision</li>
+                <li>Feeling faint when standing</li>
+              </ul>
+            </li>
+            <li><strong>Swelling</strong> (amlodipine-specific):
+              <ul>
+                <li>Ankles or feet swelling</li>
+                <li>Mild flushing or headache</li>
+              </ul>
+            </li>
+            <li><strong>Bleeding</strong> (clopidogrel-specific):
+              <ul>
+                <li>Easy bruising</li>
+                <li>Nose or gum bleeding</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4>🕐 Simple Daily Timing (Practical Setup)</h4>
+          <ul>
+            <li><strong>Morning:</strong> Clopidogrel + Losartan</li>
+            <li><strong>Evening / bedtime:</strong> Amlodipine (often reduces nighttime BP spikes and swelling risk)</li>
+            <li>This can be adjusted depending on how your body reacts and your doctor's instructions</li>
+          </ul>
+        </div>
+
+        <div class="guide-note">
+          🔑 Key rule: these meds are safe together only if prescribed for you specifically. Do not stop or change timing suddenly without medical advice.
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <button onclick="enablePush()">🔔 Enable Background Alerts</button>
+</div>
+
+<dialog id="add-dialog">
+  <h3>🌱 New Medicine</h3>
+  <label class="small">Name</label>
+  <input type="text" id="new-med-name" placeholder="e.g. Metformin">
+  <label class="small">Reminder Time (optional)</label>
+  <input type="time" id="new-med-time">
+  <div class="dialog-actions">
+    <button class="secondary" onclick="closeAddDialog()">Cancel</button>
+    <button onclick="addMedicine()">Add</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== Medicine Tracker Pro - App Logic ===================== */
+
+const STORAGE_KEY = 'medTrackerPro_data';
+const SW_CODE = `
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => self.clients.claim());
+
+self.addEventListener('message', event => {
+  const { type, payload } = event.data || {};
+  if (type === 'SCHEDULE_REMINDERS') {
+    scheduleAll(payload.meds);
+  }
+});
+
+let timers = [];
+function scheduleAll(meds) {
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+  const now = new Date();
+  (meds || []).forEach(med => {
+    if (!med.time) return;
+    const [h, m] = med.time.split(':').map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const delay = target - now;
+    const t = setTimeout(() => {
+      self.registration.showNotification('💊 Medicine Reminder', {
+        body: 'Time to take: ' + med.name,
+        icon: '',
+        tag: 'med-' + med.id,
+        requireInteraction: true
+      });
+    }, delay);
+    timers.push(t);
+  });
+}
+`;
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { meds: [], logs: {} }; // logs: { "YYYY-MM-DD": { medId: true/false } }
+}
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function todayKey(d = new Date()){
+  return d.toISOString().slice(0,10);
+}
+
+function uid(){
+  return 'm' + Date.now() + Math.floor(Math.random()*1000);
+}
+
+/* ---------------- Toast ---------------- */
+let toastTimer = null;
+function showToast(msg){
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+/* ---------------- Dialog ---------------- */
+function openAddDialog(){
+  document.getElementById('new-med-name').value = '';
+  document.getElementById('new-med-time').value = '';
+  document.getElementById('add-dialog').showModal();
+}
+function closeAddDialog(){
+  document.getElementById('add-dialog').close();
+}
+function addMedicine(){
+  const name = document.getElementById('new-med-name').value.trim();
+  const time = document.getElementById('new-med-time').value;
+  if(!name){
+    showToast('Please enter a medicine name');
+    return;
+  }
+  state.meds.push({ id: uid(), name, time });
+  saveState();
+  closeAddDialog();
+  renderAll();
+  showToast('Medicine added 🌱');
+  syncReminders();
+}
+
+function removeMedicine(id){
+  state.meds = state.meds.filter(m => m.id !== id);
+  Object.keys(state.logs).forEach(date => {
+    if(state.logs[date]) delete state.logs[date][id];
+  });
+  saveState();
+  renderAll();
+  showToast('Medicine removed');
+  syncReminders();
+}
+
+function updateMedTime(id, time){
+  const med = state.meds.find(m => m.id === id);
+  if(med){
+    med.time = time;
+    saveState();
+    syncReminders();
+  }
+}
+
+/* ---------------- Taken toggle / streaks ---------------- */
+function toggleTaken(id, checked){
+  const key = todayKey();
+  if(!state.logs[key]) state.logs[key] = {};
+  state.logs[key][id] = checked;
+  saveState();
+  renderAll();
+}
+
+function getStreak(id){
+  let streak = 0;
+  let d = new Date();
+  // if today not yet taken, start counting from yesterday
+  if(!(state.logs[todayKey(d)] && state.logs[todayKey(d)][id])){
+    d.setDate(d.getDate()-1);
+  }
+  while(true){
+    const key = todayKey(d);
+    if(state.logs[key] && state.logs[key][id]){
+      streak++;
+      d.setDate(d.getDate()-1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/* ---------------- Render Medicine List ---------------- */
+function renderMedList(){
+  const container = document.getElementById('med-list');
+  if(state.meds.length === 0){
+    container.innerHTML = `<div class="card"><h3>💊 Your Medicines</h3><p class="small">No medicines added yet. Tap "Add Medicine" below to get started.</p></div>`;
+    return;
+  }
+  const key = todayKey();
+  container.innerHTML = state.meds.map(med => {
+    const taken = !!(state.logs[key] && state.logs[key][med.id]);
+    const streak = getStreak(med.id);
+    return `
+      <div class="card">
+        <div class="med-row">
+          <label class="taken-toggle">
+            <input type="checkbox" ${taken ? 'checked' : ''} onchange="toggleTaken('${med.id}', this.checked)">
+            <span>${escapeHtml(med.name)}</span>
+          </label>
+          <span class="streak-badge">🔥 ${streak} day${streak===1?'':'s'}</span>
+        </div>
+        <div class="dose-time">
+          ⏰ Reminder:
+          <input type="time" value="${med.time || ''}" onchange="updateMedTime('${med.id}', this.value)">
+        </div>
+        <div class="med-actions">
+          <button class="danger" onclick="removeMedicine('${med.id}')">🗑️ Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------------- Calendar / Weekly View ---------------- */
+function renderCalendar(){
+  const grid = document.getElementById('calendar');
+  const summary = document.getElementById('overall-summary');
+  const days = [];
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Show current week, Sunday to Saturday
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
+
+  let takenCount = 0, totalCount = 0;
+
+  for(let i=0;i<7;i++){
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    const key = todayKey(d);
+    const dow = d.toLocaleDateString(undefined, { weekday:'short' }).slice(0,3);
+    const dateNum = d.getDate();
+    let status = 'future';
+
+    if(d > today){
+      status = 'future';
+    } else if(state.meds.length === 0){
+      status = 'future';
+    } else {
+      const log = state.logs[key] || {};
+      const takenIds = state.meds.filter(m => log[m.id]);
+      if(takenIds.length === state.meds.length && state.meds.length > 0){
+        status = 'taken';
+        if(d <= today){ takenCount++; totalCount++; }
+      } else if(takenIds.length > 0){
+        status = 'partial';
+        if(d <= today) totalCount++;
+      } else {
+        status = (d.getTime() === today.getTime()) ? 'partial' : 'missed';
+        if(d.getTime() === today.getTime()) status = 'missed';
+        if(takenIds.length === 0 && d <= today){
+          status = 'missed';
+          totalCount++;
+        }
+      }
+    }
+
+    const isToday = d.getTime() === today.getTime();
+    days.push(`<div class="day ${status} ${isToday ? 'today':''}">
+        <span class="dow">${dow}</span>
+        <span>${dateNum}</span>
+        <span class="icon"></span>
+      </div>`);
+  }
+
+  grid.innerHTML = days.join('');
+
+  if(state.meds.length === 0){
+    summary.textContent = 'Add a medicine to start tracking your week.';
+  } else {
+    const pct = totalCount > 0 ? Math.round((takenCount/totalCount)*100) : 0;
+    summary.textContent = `This week: ${takenCount}/${totalCount} fully-taken days (${pct}%)`;
+  }
+}
+
+function renderAll(){
+  renderMedList();
+  renderCalendar();
+}
+
+/* ---------------- Background Alerts (Push Notifications) ---------------- */
+async function enablePush(){
+  if(!('Notification' in window)){
+    showToast('Notifications are not supported on this device');
+    return;
+  }
+
+  if(!('serviceWorker' in navigator)){
+    showToast('Background alerts need a service worker, not supported here');
+    return;
+  }
+
+  try{
+    let permission = Notification.permission;
+
+    if(permission === 'denied'){
+      showToast('Notifications are blocked. Enable them in browser settings.');
+      return;
+    }
+
+    if(permission !== 'granted'){
+      permission = await Notification.requestPermission();
+    }
+
+    if(permission !== 'granted'){
+      showToast('Notification permission was not granted');
+      return;
+    }
+
+    // Register service worker (built from inline code via Blob URL)
+    const blob = new Blob([SW_CODE], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    const registration = await navigator.serviceWorker.register(swUrl);
+    await navigator.serviceWorker.ready;
+
+    localStorage.setItem('medTrackerPro_pushEnabled', '1');
+    syncReminders();
+
+    showToast('Background alerts enabled ✅');
+  }catch(err){
+    console.error('enablePush failed:', err);
+    showToast('Could not enable background alerts');
+  }
+}
+
+function syncReminders(){
+  if(localStorage.getItem('medTrackerPro_pushEnabled') !== '1') return;
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(registration => {
+    if(registration.active){
+      registration.active.postMessage({
+        type: 'SCHEDULE_REMINDERS',
+        payload: { meds: state.meds.filter(m => m.time) }
+      });
+    }
+  }).catch(()=>{});
+}
+
+/* ---------------- Init ---------------- */
+renderAll();
+if(localStorage.getItem('medTrackerPro_pushEnabled') === '1' && 'serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    if(regs.length > 0) syncReminders();
+  });
+}
+</script>
+</body>
+</html>
